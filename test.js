@@ -47,6 +47,57 @@ test('새 국은 손패 14/13/13/13, 생패산 69장, 전체 타일 136장으로
   assert.equal(g.players.reduce((sum,p)=>sum+p.hand.length,0) + g.wall.length + g.deadWall.length, 136);
 });
 
+test('표시와 시작 유형 설정은 이미지·라이트·내 턴 시작을 기본값으로 둔다', () => {
+  const g = E.newGame({});
+  assert.equal(g.settings.textTiles, false);
+  assert.equal(g.settings.theme, 'light');
+  assert.equal(g.settings.startTurn, 'self');
+  assert.equal(g.dealerIndex, 0);
+  assert.equal(g.currentTurn, 0);
+});
+
+test('상대 선공 모드는 상대를 동가로 배정하고 첫 타패 전 14장을 유지한다', () => {
+  const g = E.newGame({ startTurn: 'opponent', difficulty: 'beginner' });
+  assert.equal(g.dealerIndex, 1);
+  assert.equal(g.currentTurn, 1);
+  assert.equal(g.players[1].seat, '동');
+  assert.equal(g.players[1].name, 'AI · 동');
+  assert.equal(g.players[0].name, '나');
+  assert.equal(g.players[0].seat, '북');
+  assert.deepEqual(g.players.map(p => p.hand.length), [13, 14, 13, 13]);
+  assert.equal(g.initialDiscardPending, true);
+  assert.equal(g.wall.length, 69);
+  const beforeWall = g.wall.length;
+  g.players[0].tempFuriten = true; // Keep this turn-order test deterministic if the random hand is tenpai.
+  const result = E.performAITurn(g);
+  assert.notEqual(result.status, 'error');
+  assert.equal(g.initialDiscardPending, false);
+  assert.equal(g.players[1].hand.length, 13);
+  assert.equal(g.players[1].river.length, 1);
+  assert.equal(g.wall.length, beforeWall); // East's first discard uses the already-dealt 14th tile.
+  assert.equal(g.currentTurn, 2);
+  assert.equal(g.players.reduce((sum, p) => sum + p.hand.length, 0) + g.wall.length + g.deadWall.length + g.players.reduce((sum, p) => sum + p.river.length, 0), 136);
+});
+
+
+test('친의 첫 타패 후 초기 상태가 해제되어 정상적인 이후 쯔모가 가능하다', () => {
+  const g = E.newGame({ startTurn: 'self' });
+  assert.equal(g.initialDiscardPending, true);
+  const result = E.applyHumanDiscard(g, g.players[0].hand[0].uid, false);
+  assert.equal(result.ok, true);
+  assert.equal(g.initialDiscardPending, false);
+  assert.equal(g.players[0].hand.length, 13);
+});
+
+test('선공 좌석에 따라 자풍과 친 점수 계산이 달라진다', () => {
+  const g = E.newGame({ startTurn: 'opponent' });
+  assert.equal(E.getRoundContext(g, 0, 'ron').seatWind, 30); // human is North
+  assert.equal(E.getRoundContext(g, 1, 'ron').seatWind, 27); // AI 1 is East
+  const dealerRon = E.pointsForHand(1, 30, 1, 'ron', 0, 0, 1);
+  const nonDealerRon = E.pointsForHand(1, 30, 0, 'ron', 1, 0, 1);
+  assert.ok(dealerRon.ron > nonDealerRon.ron);
+});
+
 test('일반형 완성패는 -1샹텐, 13장 텐파이는 0샹텐이다', () => {
   assert.equal(E.calcShanten(counts('123m 123p 123s 789s 55z')), -1);
   const tenpai = counts('123m 123p 123s 789s 5z');
