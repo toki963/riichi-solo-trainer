@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d2420">
+  <meta name="description" content="모바일에서 한 국을 플레이하고 타패 효율과 수비 판단을 복기하는 로컬 리치 마작 연습 게임">
+  <title>리치 마작 연습실</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="engine.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">雀</div>
+        <div>
+          <div class="brand-title">리치 마작 연습실</div>
+          <div class="brand-subtitle">ONE-HAND RIICHI TRAINER</div>
+        </div>
+      </div>
+      <div class="live-indicator"><span class="live-dot"></span><span id="phaseLabel">준비 중</span></div>
+    </header>
+
+    <nav class="main-tabs" aria-label="주요 화면">
+      <button class="nav-tab active" data-view="table"><span>탁자</span><small>PLAY</small></button>
+      <button class="nav-tab" data-view="efficiency"><span>패효율</span><small>EFFICIENCY</small></button>
+      <button class="nav-tab" data-view="defense"><span>수비 훈련</span><small>DEFENSE</small></button>
+      <button class="nav-tab" data-view="review"><span>국 복기</span><small>REPLAY</small></button>
+      <button class="nav-tab" data-view="settings"><span>기록·설정</span><small>PROFILE</small></button>
+    </nav>
+
+    <main id="mainContent">
+      <section class="view active" id="view-table" aria-labelledby="tableTitle">
+        <div class="section-heading table-heading">
+          <div>
+            <p class="eyebrow">LIVE HAND</p>
+            <h1 id="tableTitle">동1국 · 한 국 연습</h1>
+            <p class="section-subtitle" id="gameSubtitle">내 손패와 공개 정보만으로 판단하세요.</p>
+          </div>
+          <button class="button button-quiet button-small" id="newGameTop">새 국</button>
+        </div>
+
+        <div class="status-grid" id="statusGrid">
+          <div class="status-card"><span>국</span><strong id="roundValue">동1국</strong></div>
+          <div class="status-card"><span>내 자풍</span><strong id="seatValue">동가</strong></div>
+          <div class="status-card"><span>남은 패산</span><strong id="wallValue">69장</strong></div>
+          <div class="status-card"><span>내 점수</span><strong id="pointsValue">25,000</strong></div>
+        </div>
+
+        <div id="gameMessage" class="message-bar" role="status" aria-live="polite">패를 선택한 다음 타패하세요.</div>
+
+        <div class="table-layout">
+          <section class="opponents-section" aria-label="상대 플레이어 공개 정보">
+            <div class="minor-heading"><h2>상대 공개 정보</h2><span class="minor-caption">손패는 종료 전까지 비공개</span></div>
+            <div class="opponent-grid" id="opponentGrid"></div>
+          </section>
+
+          <section class="center-board" aria-label="국 공개 정보">
+            <div class="center-board-top">
+              <div>
+                <div class="minor-label">도라 표시패</div>
+                <div id="doraIndicators" class="dora-row"></div>
+              </div>
+              <div class="center-note">
+                <span class="round-chip">동장 · 1국</span>
+                <span id="riichiPotLabel">공탁 0점</span>
+              </div>
+            </div>
+            <div id="turnContext" class="turn-context">내 차례입니다. 손패를 살펴보세요.</div>
+            <div id="ronOffer" class="ron-offer hidden">
+              <div><strong>론할 수 있습니다.</strong><p id="ronOfferText">상대의 버림패로 화료할 수 있습니다.</p></div>
+              <div class="ron-actions"><button class="button button-primary" id="claimRon">론</button><button class="button button-secondary" id="passRon">패스</button></div>
+            </div>
+            <div id="liveHintPanel" class="hint-panel hidden"></div>
+          </section>
+
+          <section class="player-dock" id="playerDock" aria-label="내 손패와 조작">
+            <div class="hand-header">
+              <div><div class="minor-heading-inline"><h2>내 손패</h2><span id="handStateLabel" class="state-pill">14장 · 타패 대기</span></div><p id="handHelp" class="minor-caption">패를 터치해 선택하고, 아래 버튼으로 확정하세요.</p></div>
+              <div id="selfRiichiBadge" class="riichi-badge hidden">立直</div>
+            </div>
+            <div class="hand-row">
+              <div id="handTiles" class="hand-tiles" aria-label="손패"></div>
+              <div class="drawn-divider" aria-hidden="true"></div>
+              <div id="drawnTile" class="drawn-tile" aria-label="쯔모패"></div>
+            </div>
+            <div class="hand-legend"><span><i class="legend-dot selected-dot"></i>선택한 패</span><span><i class="legend-dot draw-dot"></i>이번 쯔모</span><span id="shantenQuickLabel">샹텐 수는 타패 후 복기에서 확인</span></div>
+            <div class="action-row">
+              <button class="button button-secondary" id="tsumoButton" disabled>쯔모</button>
+              <button class="button button-secondary" id="riichiButton" disabled>리치 선언</button>
+              <button class="button button-primary" id="discardButton" disabled>타패 확정</button>
+            </div>
+            <div class="secondary-actions">
+              <button class="text-button" id="hintButton">힌트 요청</button>
+              <button class="text-button" id="analysisShortcut">최근 타패 분석</button>
+              <span class="tiny-muted" id="selectionLabel">선택한 패 없음</span>
+            </div>
+          </section>
+        </div>
+
+        <div id="endResultPanel" class="end-result hidden"></div>
+      </section>
+
+      <section class="view" id="view-efficiency" aria-labelledby="efficiencyTitle">
+        <div class="section-heading">
+          <div><p class="eyebrow">TILE EFFICIENCY</p><h1 id="efficiencyTitle">타패 효율 분석</h1><p class="section-subtitle">완료한 타패를 당시 정보로 비교합니다. 전략적 정답을 보장하는 기능은 아닙니다.</p></div>
+        </div>
+        <div id="efficiencySummary" class="surface-card"></div>
+        <div class="info-strip"><span class="info-icon">i</span><p>‘미확인 매수’는 손패·버림패·도라 표시패 등 보이는 패를 제외한 수입니다. 상대 손패와 실제 남은 패산 위치는 알 수 없으므로 정확한 실물 패산 매수나 화료 확률로 해석하지 마세요.</p></div>
+        <div class="surface-card" id="efficiencyDrillCard">
+          <div class="card-heading"><div><h2>빠른 패효율 훈련</h2><p>무작위 14장으로 타패 후보를 연습합니다. 제출하기 전에는 최선 후보를 보여 주지 않습니다.</p></div><button class="button button-quiet button-small" id="refreshEfficiencyTraining">새 손패</button></div>
+          <div id="effTrainingHand" class="practice-hand" aria-label="패효율 훈련 손패"></div>
+          <div class="action-row action-row-training"><button class="button button-primary" id="submitEfficiencyTraining" disabled>타패 제출</button><button class="button button-secondary" id="clearEfficiencySelection">선택 해제</button></div>
+          <div id="effTrainingResult" class="training-result hidden"></div>
+        </div>
+        <div class="surface-card">
+          <div class="card-heading"><div><h2>턴별 타패 기록</h2><p>기록을 선택하면 당시 손패와 후보를 확인할 수 있습니다.</p></div><span id="decisionCountBadge" class="count-badge">0회</span></div>
+          <div id="decisionList" class="decision-list empty-state">아직 기록된 타패가 없습니다.</div>
+        </div>
+        <div class="surface-card" id="efficiencyDetailCard">
+          <div class="card-heading"><div><h2 id="efficiencyDetailTitle">선택한 턴의 후보 비교</h2><p id="efficiencyDetailSubtitle">타패 후 분석을 여기에서 확인할 수 있습니다.</p></div></div>
+          <div id="candidateTable" class="candidate-table empty-state">탁자에서 첫 타패를 완료하면 후보 비교가 표시됩니다.</div>
+        </div>
+      </section>
+
+      <section class="view" id="view-defense" aria-labelledby="defenseTitle">
+        <div class="section-heading">
+          <div><p class="eyebrow">DEFENSE DRILL</p><h1 id="defenseTitle">수비 판단 훈련</h1><p class="section-subtitle">가상의 리치 상황에서 현물·스지·벽 단서를 확인합니다. 확률 숫자는 표시하지 않습니다.</p></div>
+          <button class="button button-quiet button-small" id="newDefenseScenario">새 상황</button>
+        </div>
+        <div id="defenseScenarioText" class="scenario-banner">상황을 준비하고 있습니다.</div>
+        <div class="surface-card">
+          <div class="card-heading"><div><h2>상대의 버림패</h2><p>붉은 테두리는 리치 선언패입니다.</p></div><span class="riichi-badge">立直</span></div>
+          <div id="defenseRiver" class="defense-river"></div>
+        </div>
+        <div class="surface-card">
+          <div class="card-heading"><div><h2>내 손패</h2><p>버릴 패를 선택하세요. 제출하기 전에는 해설을 공개하지 않습니다.</p></div><span id="defenseSelectedLabel" class="count-badge">선택 없음</span></div>
+          <div id="defenseHand" class="practice-hand" aria-label="수비 훈련 손패"></div>
+          <div class="action-row action-row-training"><button class="button button-primary" id="submitDefense" disabled>선택 제출</button><button class="button button-secondary" id="refreshDefense">다른 손패</button></div>
+          <div id="defenseResult" class="training-result hidden"></div>
+        </div>
+        <div class="info-strip"><span class="info-icon">i</span><p>현물은 해당 상대의 론에 안전하지만, 스지는 양면 대기만 일부 배제하는 단서입니다. 벽 단서 역시 완전한 안전을 뜻하지 않습니다.</p></div>
+      </section>
+
+      <section class="view" id="view-review" aria-labelledby="reviewTitle">
+        <div class="section-heading">
+          <div><p class="eyebrow">POST-HAND REVIEW</p><h1 id="reviewTitle">한 국 복기</h1><p class="section-subtitle">결과와 판단의 질을 분리해 살펴봅니다. 각 턴은 당시 공개 정보만 담고 있습니다.</p></div>
+        </div>
+        <div id="reviewTop"></div>
+        <div class="surface-card">
+          <div class="card-heading"><div><h2>타임라인</h2><p>턴을 고르면 당시 손패·공개 정보·대안 타패를 다시 볼 수 있습니다.</p></div></div>
+          <div id="reviewTimeline" class="decision-list empty-state">국이 끝나면 이곳에 상세 복기가 표시됩니다.</div>
+        </div>
+        <div class="surface-card" id="reviewDetailCard">
+          <div class="card-heading"><div><h2 id="reviewDetailTitle">턴 상세</h2><p id="reviewDetailSubtitle">타임라인에서 턴을 선택하세요.</p></div></div>
+          <div id="reviewDetail" class="review-detail empty-state">아직 선택된 턴이 없습니다.</div>
+        </div>
+        <div id="finalReveal" class="surface-card hidden"></div>
+      </section>
+
+      <section class="view" id="view-settings" aria-labelledby="settingsTitle">
+        <div class="section-heading"><div><p class="eyebrow">LOCAL PROFILE</p><h1 id="settingsTitle">기록과 설정</h1><p class="section-subtitle">설정과 기록은 이 브라우저의 로컬 저장소에 보관됩니다.</p></div></div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="surface-card">
+          <div class="card-heading"><div><h2>게임 설정</h2><p>변경은 새 국부터 적용됩니다. 실행 중인 국은 현재 설정을 유지합니다.</p></div></div>
+          <div class="settings-list">
+            <label class="setting-row"><span><strong>적도라 사용</strong><small>만·통·삭 5에 적도라 한 장씩</small></span><input type="checkbox" id="settingRedFives" checked></label>
+            <label class="setting-row"><span><strong>치또이츠·국사무쌍 고려</strong><small>샹텐과 화료 형태 분석에 포함</small></span><input type="checkbox" id="settingSpecialHands" checked></label>
+            <label class="setting-row"><span><strong>손패 자동 정렬</strong><small>타일 종류순으로 정렬</small></span><input type="checkbox" id="settingAutoSort" checked></label>
+            <label class="setting-row"><span><strong>패에 숫자·무늬 표시</strong><small>초보자용 글자 표시 옵션</small></span><input type="checkbox" id="settingTileNumbers" checked></label>
+            <label class="setting-row"><span><strong>타패 후 간단 분석 표시</strong><small>마지막 선택의 효율 차이를 보여 줌</small></span><input type="checkbox" id="settingPostAnalysis" checked></label>
+            <label class="setting-row"><span><strong>플레이 중 힌트 요청 허용</strong><small>기본은 정답을 숨기고, 요청할 때만 후보를 표시</small></span><input type="checkbox" id="settingAllowHints" checked></label>
+            <label class="setting-row"><span><strong>AI 난이도</strong><small>강자 수준 검증이 아닌 기본 휴리스틱 차이</small></span><select id="settingDifficulty"><option value="beginner">초급</option><option value="intermediate">중급</option><option value="advanced">고급</option></select></label>
+          </div>
+          <div class="settings-actions"><button class="button button-primary" id="saveSettings">설정 저장</button><button class="button button-secondary" id="startWithSettings">설정 적용 후 새 국</button></div>
+        </div>
+        <div class="surface-card">
+          <div class="card-heading"><div><h2>완료한 국</h2><p>요약 통계이며, 한두 국의 점수만으로 실력을 판단하지 마세요.</p></div><span id="historyCount" class="count-badge">0국</span></div>
+          <div id="historyList" class="history-list empty-state">완료 기록이 아직 없습니다.</div>
+          <div class="settings-actions"><button class="button button-secondary" id="exportData">기록 내보내기</button><label class="button button-secondary file-import">기록 가져오기<input type="file" id="importData" accept="application/json,.json"></label><button class="button button-danger-outline" id="clearHistory">기록 초기화</button></div>
+        </div>
+        <div class="surface-card support-card">
+          <div class="card-heading"><div><h2>지원 범위와 한계</h2><p>미지원 기능은 화면에서 완성된 기능처럼 표시하지 않습니다.</p></div></div>
+          <ul class="support-list">
+            <li><span class="support-state supported">지원</span><span><strong>4인 동1국, 쯔모·론·리치·유국</strong><small>플레이어는 동가이며 AI 3명은 손패를 공개하지 않습니다. 리치 선언과 쯔모패 고정 타패를 처리합니다.</small></span></li>
+            <li><span class="support-state supported">지원</span><span><strong>일반형·치또이츠·국사무쌍 샹텐, 유효패</strong><small>미확인 매수는 보이는 패 기준입니다. 실제 벽 위치나 숨은 손패의 매수를 알 수는 없습니다.</small></span></li>
+            <li><span class="support-state supported">지원</span><span><strong>기본 역·도라·점수 근사 계산</strong><small>멘젠, 리치, 멘젠쯔모, 탕야오, 역패, 일부 형태 역을 판정합니다. 복잡한 특수 상황 전체의 완전한 심판 엔진은 아닙니다.</small></span></li>
+            <li><span class="support-state limited">부분 지원</span><span><strong>AI 공격·수비</strong><small>샹텐·형태·도라 보존과 일부 안전 단서를 쓰는 휴리스틱입니다. 실제 강자 수준으로 검증되지 않았습니다.</small></span></li>
+            <li><span class="support-state limited">부분 지원</span><span><strong>수비 위험 분석</strong><small>현물·스지·간단한 벽 단서만 설명합니다. 정량적 론 확률은 계산하거나 표시하지 않습니다.</small></span></li>
+            <li><span class="support-state missing">미지원</span><span><strong>치·퐁·깡, 복수 론, 이페코 외 복잡한 역·역만 전반, 오라스·남장 진행</strong><small>후로와 깡, 노텐 벌점, 연장·반장전 점수 전략은 아직 구현하지 않았습니다. 유국 점수 이동은 적용하지 않습니다.</small></span></li>
+          </ul>
+        </div>
+        <div class="surface-card"><div class="card-heading"><div><h2>참고 자료</h2><p>패효율 비교와 학습 설정 아이디어를 참고했습니다. 원본 사이트를 복제하지 않은 독립 구현입니다.</p></div></div><p class="source-link"><a href="https://euophrys.itch.io/mahjong-efficiency-trainer" target="_blank" rel="noreferrer">Mahjong Efficiency Trainer — Euophrys ↗</a></p></div>
+      </section>
+    </main>
+
+    <footer class="app-footer"><span>로컬 실행 · 서버 전송 없음</span><span>학습용 프로토타입 0.1</span></footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="confirmDialog" class="confirm-dialog">
+    <form method="dialog"><div class="dialog-mark">!</div><h2 id="dialogTitle">확인</h2><p id="dialogMessage">진행 중인 국을 종료할까요?</p><div class="dialog-actions"><button class="button button-secondary" value="cancel">취소</button><button class="button button-primary" id="dialogConfirm" value="confirm">확인</button></div></form>
+  </dialog>
+</body>
+</html>

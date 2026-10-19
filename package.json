@@ -1,0 +1,9 @@
+{
+  "name": "riichi-solo-trainer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mobile-first solo Riichi Mahjong practice web app",
+  "scripts": {
+    "test": "node test.js"
+  }
+}
