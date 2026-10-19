@@ -150,7 +150,6 @@ h3 { font-size: 13px; margin: 0; }
 .tile-button:hover { border-color: #9fbca9; }
 .tile-button:active { transform: translateY(1px); }
 .tile-button.selected { transform: translateY(-6px); border-color: #c9963c; background: #fff0bf; box-shadow: 0 2px 0 #cfad6a, 0 0 0 2px rgba(217,169,83,.18); z-index: 1; }
-.tile-button.drawn-selected { border-color: #cf9b3f; background: #fff1bf; box-shadow: 0 0 0 2px rgba(217,169,83,.18); }
 .tile-number { font-size: clamp(10px, 2.4vw, 14px); line-height: 1.04; font-weight: 900; letter-spacing: -.07em; }
 .tile-suit { color: #8c9890; font-size: clamp(6px, 1.4vw, 8px); line-height: 1; font-weight: 900; margin-top: 2px; }
 .tile-button.suit-m .tile-number, .tile-static.suit-m .tile-number { color: #b8443d; }
@@ -430,19 +429,15 @@ h3 { font-size: 13px; margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
-.tile-pips { display: grid; grid-template-columns: repeat(3, minmax(2px, 4px)); grid-auto-rows: 4px; gap: 1.5px; align-content: center; justify-content: center; width: 100%; height: 100%; padding: 3px 0; }
-.tile-pips i { display: block; width: 3px; height: 3px; border-radius: 50%; background: currentColor; justify-self: center; align-self: center; }
-.tile-button.suit-m .tile-pips, .tile-static.suit-m .tile-pips { color: #b8443d; }
-.tile-button.suit-p .tile-pips, .tile-static.suit-p .tile-pips { color: #337f61; }
-.tile-button.suit-s .tile-pips, .tile-static.suit-s .tile-pips { color: #356b9b; }
 
-/* Image-based manzu, pinzu and souzu tiles. Artwork: FluffyStuff/riichi-mahjong-tiles (public domain). */
-.tile-button.suit-m, .tile-button.suit-p, .tile-button.suit-s,
-.tile-static.suit-m, .tile-static.suit-p, .tile-static.suit-s {
+
+/* Same FluffyStuff tile art is used for numbered and honor tiles. */
+.tile-button.suit-m, .tile-button.suit-p, .tile-button.suit-s, .tile-button.honor,
+.tile-static.suit-m, .tile-static.suit-p, .tile-static.suit-s, .tile-static.honor {
   padding: 0;
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
+  background: linear-gradient(180deg, #fffef8 0%, #f0f0e5 100%);
+  border-color: #d0d8d1;
+  box-shadow: 0 2px 0 #d2d6ca, 0 3px 5px rgba(18,44,33,.08);
   overflow: hidden;
 }
 .tile-art {
@@ -451,7 +446,7 @@ h3 { font-size: 13px; margin: 0; }
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: contain;
   pointer-events: none;
   user-select: none;
 }
@@ -475,26 +470,186 @@ h3 { font-size: 13px; margin: 0; }
   letter-spacing: 0;
   pointer-events: none;
 }
-.tile-button.suit-m.selected, .tile-button.suit-p.selected, .tile-button.suit-s.selected {
+.tile-button.tile-image-mode.selected {
+  transform: translateY(-6px);
+  border-color: transparent;
   background: #fff0bf;
   border-color: #c9963c;
-  box-shadow: 0 0 0 2px 
-rgba(217,169,83,.32);
+  box-shadow: 0 2px 0 #cfad6a, 0 0 0 2px rgba(217,169,83,.25);
   outline: 1px solid #c9963c;
+  z-index: 1;
 }
-.tile-button.suit-m.drawn-selected, .tile-button.suit-p.drawn-selected, .tile-button.suit-s.drawn-selected {
-  background: #fff1bf;
-  border-color: #cf9b3f;
-  box-shadow: 0 0 0 2px rgba(217,169,83,.24);
-}
-/* The red-five art already marks aka-dora, so don't overlay the old 赤 label. */
-.tile-button.suit-m.red-five::after, .tile-button.suit-p.red-five::after, .tile-button.suit-s.red-five::after,
-.tile-static.suit-m.red-five::after, 
-.tile-static.suit-p.red-five::after, .tile-static.suit-s.red-five::after {
+.tile-button.tile-image-mode.red-five::after, .tile-static.tile-image-mode.red-five::after {
   content: none;
   display: none;
 }
-.tile-static.suit-m.riichi-discard, .tile-static.suit-p.riichi-discard, .tile-static.suit-s.riichi-discard,
-.tile-button.suit-m.riichi-discard, .tile-button.suit-p.riichi-discard, .tile-button.suit-s.riichi-discard {
+.tile-button.tile-image-mode.riichi-discard, .tile-static.tile-image-mode.riichi-discard {
   border: 2px solid #c85c4e;
 }
+.tile-text-mode.suit-m, .tile-text-mode.suit-p, .tile-text-mode.suit-s, .tile-text-mode.honor {
+  background: linear-gradient(180deg, #fffef8 0%, #f0f0e5 100%);
+  border-color: #d0d8d1;
+  box-shadow: 0 2px 0 #d2d6ca, 0 3px 5px rgba(18,44,33,.08);
+}
+.tile-fallback-face {
+  position: absolute;
+  inset: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #fffefa;
+  color: #233a31;
+  font-size: clamp(9px, 2.1vw, 13px);
+  font-weight: 900;
+  letter-spacing: -.04em;
+  line-height: 1;
+  pointer-events: none;
+}
+.tile-fallback-face.red-fallback::after {
+  content: "赤";
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  color: #b74336;
+  font-size: 6px;
+}
+.tile-static.small .tile-fallback-face { font-size: 9px; }
+.tile-static.dora-tile .tile-fallback-face { font-size: 11px; }
+
+
+/* Complete app theme. Tile artwork is never color-filtered. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e5eee8;
+  --muted: #b0bdb6;
+  --soft: #8c9b92;
+  --line: #3b4942;
+  --canvas: #111916;
+  --paper: #1d2722;
+  --felt: #0d352b;
+  --felt-2: #164639;
+  --felt-3: #225847;
+  --accent: #e1b45d;
+  --accent-strong: #f0c978;
+  --mint: #253e33;
+  --red: #f0786f;
+  --blue: #86b6e5;
+  --green: #71c5a9;
+  --shadow: 0 8px 28px rgba(0,0,0,.24);
+}
+html[data-theme="dark"], html[data-theme="dark"] body { background: var(--canvas); color: var(--ink); }
+html[data-theme="dark"] .live-indicator { background: #202e27; border-color: #3b4942; color: var(--muted); }
+html[data-theme="dark"] .main-tabs { background: #202a24; }
+html[data-theme="dark"] .nav-tab { color: #bdc9c1; }
+html[data-theme="dark"] .nav-tab small { color: #8d9d93; }
+html[data-theme="dark"] .nav-tab:hover:not(.active) { background: #2c3a32; color: #f2f6f3; }
+html[data-theme="dark"] .section-subtitle,
+html[data-theme="dark"] .minor-caption,
+html[data-theme="dark"] .tiny-muted,
+html[data-theme="dark"] .brand-subtitle,
+html[data-theme="dark"] .opponent-points,
+html[data-theme="dark"] .opponent-state,
+html[data-theme="dark"] .decision-main small,
+html[data-theme="dark"] .summary-copy p,
+html[data-theme="dark"] .card-heading p,
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .app-footer { color: var(--muted); }
+html[data-theme="dark"] .eyebrow { color: #a6c4b4; }
+html[data-theme="dark"] .button-secondary,
+html[data-theme="dark"] .button-danger-outline { background: #26332c; color: var(--ink); border-color: #46554c; }
+html[data-theme="dark"] .button-secondary:hover:not(:disabled) { background: #304037; border-color: #5c6c61; }
+html[data-theme="dark"] .button-quiet { background: #2b3930; border-color: #435249; color: #c8e0d0; }
+html[data-theme="dark"] .button-quiet:hover:not(:disabled) { background: #35473b; }
+html[data-theme="dark"] .text-button { color: #94d9bc; text-decoration-color: #436e58; }
+html[data-theme="dark"] .status-card { background: #1d2822; border-color: #37453c; }
+html[data-theme="dark"] .status-card span { color: #a1b0a7; }
+html[data-theme="dark"] .status-card strong { color: #e5eee8; }
+html[data-theme="dark"] .message-bar { background: #1e382b; border-color: #365943; color: #bfe6cb; }
+html[data-theme="dark"] .message-bar.warning { background: #3b3020; border-color: #6b552d; color: #f1dba5; }
+html[data-theme="dark"] .message-bar.error { background: #402624; border-color: #74413c; color: #f5bcb4; }
+html[data-theme="dark"] .message-bar.neutral { background: #27342d; border-color: #3d4c42; color: #c2cec6; }
+html[data-theme="dark"] .opponents-section,
+html[data-theme="dark"] .player-dock,
+html[data-theme="dark"] .surface-card { background: var(--paper); border-color: #37453d; }
+html[data-theme="dark"] .opponent-card { background: #222e27; border-color: #3d4b42; }
+html[data-theme="dark"] .opponent-name { color: #e4eee7; }
+html[data-theme="dark"] .seat-chip { background: #30463a; color: #c8e4d2; }
+html[data-theme="dark"] .river-tile.riichi-discard { background: #392a25; }
+html[data-theme="dark"] .center-board { background: var(--felt); border-color: #205043; }
+html[data-theme="dark"] .center-board-top { border-bottom-color: rgba(216,235,221,.16); }
+html[data-theme="dark"] .tile-button.tile-text-mode,
+html[data-theme="dark"] .tile-static.tile-text-mode { background: linear-gradient(180deg,#fbfaf2 0%,#dfe1d7 100%); color: #22382f; border-color: #8f9d91; }
+html[data-theme="dark"] .tile-button.tile-text-mode.selected { background: #ffe8a2; color: #25382d; border-color: #d2a244; }
+html[data-theme="dark"] .tile-button.tile-image-mode,
+html[data-theme="dark"] .tile-static.tile-image-mode { background: linear-gradient(180deg,#fffef8 0%,#f0f0e5 100%); border-color:#c8cfc7; color:#233a31; }
+html[data-theme="dark"] .tile-button.tile-image-mode.selected { background:#ffe8a2; border-color:#d2a244; }
+html[data-theme="dark"] .tile-static.tile-image-mode.dora-tile { background: #fffefa; border-color: #c8cfc7; }
+html[data-theme="dark"] .hand-legend { color: #afbbb3; }
+html[data-theme="dark"] .replay-river-block,
+html[data-theme="dark"] .review-assessment { background: #222e27; border-color: #3a4b40; }
+html[data-theme="dark"] .review-assessment p,
+html[data-theme="dark"] .review-score-item span,
+html[data-theme="dark"] .review-score-item small,
+html[data-theme="dark"] .replay-section-title { color: #adbbb2; }
+html[data-theme="dark"] .review-assessment strong { color: #e5eee8; }
+html[data-theme="dark"] .review-assessment.good { background:#233b2b; border-color:#3f6448; }
+html[data-theme="dark"] .review-assessment.review { background:#3a3020; border-color:#62512c; }
+html[data-theme="dark"] .review-assessment.poor { background:#3e2825; border-color:#67403a; }
+html[data-theme="dark"] .review-score-item { background:#222e27; border-color:#3a4b40; }
+html[data-theme="dark"] .review-score-item strong { color:#d9ebdf; }
+html[data-theme="dark"] .support-list strong { color:#e1eae4; }
+html[data-theme="dark"] .support-list small { color:#adbbb2; }
+html[data-theme="dark"] .candidate-detail small,
+html[data-theme="dark"] .candidate-value small { color:#b0beb5; }
+html[data-theme="dark"] .candidate-value strong { color:#9fd7b4; }
+html[data-theme="dark"] .history-result strong { color:#9fd7b4; }
+html[data-theme="dark"] .dialog-mark { background:#433a24; color:#f0d38d; }
+.tile-static.tile-image-mode.dora-tile { background: #fffefa; border-color: #c8cfc7; box-shadow: 0 2px 4px rgba(0,0,0,.12); }
+html[data-theme="dark"] .surface-card .count-badge,
+html[data-theme="dark"] .decision-index { background: #2b3e31; color: #b8dec4; }
+html[data-theme="dark"] .summary-metric { background: #243129; border-color: #35463a; }
+html[data-theme="dark"] .summary-metric span { color: #b0beb3; }
+html[data-theme="dark"] .summary-metric strong { color: #dcebe0; }
+html[data-theme="dark"] .score-circle { background: #273b2e; border-color: #425947; color: #d8eddb; }
+html[data-theme="dark"] .decision-row,
+html[data-theme="dark"] .candidate-row,
+html[data-theme="dark"] .history-row,
+html[data-theme="dark"] .stat-tile,
+html[data-theme="dark"] .setting-row { background: #222e27; border-color: #3a4b40; color: var(--ink); }
+html[data-theme="dark"] .decision-row:hover,
+html[data-theme="dark"] .decision-row.selected { background: #2c3e32; border-color: #5b7b62; }
+html[data-theme="dark"] .decision-tag.good { background: #234334; color: #a9e1c0; }
+html[data-theme="dark"] .decision-tag.review { background: #463a22; color: #ecd08b; }
+html[data-theme="dark"] .decision-tag.poor { background: #482b28; color: #f2b3aa; }
+html[data-theme="dark"] .candidate-row.best { background: #263b2d; border-color: #4c7555; }
+html[data-theme="dark"] .info-strip { background: #25352a; border-color: #3a4c3e; }
+html[data-theme="dark"] .info-icon { background: #38513e; color: #c1e0c6; }
+html[data-theme="dark"] .info-strip p { color: #c1d2c5; }
+html[data-theme="dark"] .setting-row { border-bottom-color: #3a4b40; }
+html[data-theme="dark"] .setting-row strong { color: #e1eae4; }
+html[data-theme="dark"] .setting-row small,
+html[data-theme="dark"] .stat-tile small,
+html[data-theme="dark"] .history-row small { color: #adbbb2; }
+html[data-theme="dark"] input[type="checkbox"] { accent-color: #77c6a4; }
+html[data-theme="dark"] select,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="number"] { background: #17211b; border-color: #4b5b50; color: #e8f0ea; }
+html[data-theme="dark"] .source-link a { color: #94d9bc; }
+html[data-theme="dark"] .support-state.supported { background: #244232; color: #a9e1bc; }
+html[data-theme="dark"] .support-state.limited { background: #443a25; color: #efd596; }
+html[data-theme="dark"] .support-state.missing { background: #452b29; color: #efb7b0; }
+html[data-theme="dark"] .app-footer { border-top-color: #35453b; }
+html[data-theme="dark"] .confirm-dialog { background: #1d2722; color: #e5eee8; border-color: #435248; }
+html[data-theme="dark"] .confirm-dialog p { color: #b8c7bd; }
+html[data-theme="dark"] .toast { background: #263b30; border-color: #4b6a55; color: #e1efe5; }
+html[data-theme="dark"] .training-result { background: #23332a; border-color: #3a5140; color: #d7e8dc; }
+html[data-theme="dark"] .scenario-banner { background: #26372d; border-color: #405746; color: #dce9df; }
+html[data-theme="dark"] .end-result { background:#23382b; border-color:#45664c; }
+html[data-theme="dark"] .end-result h2 { color:#d8ebdc; }
+html[data-theme="dark"] .end-result p { color:#b9cdbf; }
+html[data-theme="dark"] .tile-fallback-face { background:#fffefa; color:#233a31; }
+html[data-theme="dark"] .tile-button.tile-image-mode:hover { border-color:#a8c7af; }
+html[data-theme="dark"] .round-chip { background: rgba(223,184,103,.1); }
+html[data-theme="dark"] .tile-button.tile-image-mode.selected .tile-rank-corner,
+html[data-theme="dark"] .tile-static.tile-image-mode .tile-rank-corner { background: rgba(255,255,255,.94); color: #1b3027; }

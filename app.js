@@ -14,6 +14,9 @@
     showPostDiscardAnalysis: true,
     allowHints: true,
     difficulty: 'intermediate',
+    textTiles: false,
+    theme: 'light',
+    startTurn: 'self',
   };
   let settings = loadJSON(STORAGE.settings, DEFAULT_SETTINGS);
   settings = { ...DEFAULT_SETTINGS, ...(settings && typeof settings === 'object' ? settings : {}) };
@@ -59,6 +62,30 @@
 
   function escapeHTML(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function applyTheme(theme = settings.theme) {
+    const normalized = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = normalized;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = normalized === 'dark' ? '#111916' : '#0d2420';
+  }
+
+  function tileTextFace(type, red = false) {
+    if (type >= 27) return `<span class="tile-number">${E.HONORS[type - 27]}</span>`;
+    const rank = type % 9 + 1;
+    const suit = ['만', '통', '삭'][Math.floor(type / 9)];
+    const displayRank = red ? 5 : rank;
+    return `<span class="tile-number">${displayRank}</span><span class="tile-suit">${suit}</span>`;
+  }
+
+  function tileImageFile(type, red = false) {
+    if (type < 27) {
+      const rank = type % 9 + 1;
+      const suitName = ['Man', 'Pin', 'Sou'][Math.floor(type / 9)];
+      return rank === 5 && red ? `${suitName}5-Dora.svg` : `${suitName}${rank}.svg`;
+    }
+    return ['Ton.svg', 'Nan.svg', 'Shaa.svg', 'Pei.svg', 'Haku.svg', 'Hatsu.svg', 'Chun.svg'][type - 27];
   }
 
   function showToast(message) {
@@ -115,24 +142,13 @@
   function tileFace(tile) {
     const type = typeof tile === 'number' ? tile : tile.type;
     const red = typeof tile === 'object' && Boolean(tile.red);
-
-    // 만·통·삭은 실제 리치 마작 타일 그림을 사용합니다.
-    if (type < 27) {
-      const rank = type % 9 + 1;
-      const suitName = ['Man', 'Pin', 
-'Sou'][Math.floor(type / 9)];
-      const file = rank === 5 && red
-        ? (suitName + '5-Dora.svg')
-        : (suitName + rank + '.svg');
-      const source = 'https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/' + file;
-      const badge = settings.showTileNumbers
-        ? '<span class="tile-rank-corner" aria-hidden="true">' + rank + '</span>'
-        : '';
-      return '<img class="tile-art" src="' + source + '" alt="" draggable="false" loading="lazy" decoding="async">' + badge;
-    }
-
-    // 자패(동남서북·백발중)는 기존 표기를 유지합니다.
-    return '<span class="tile-number">' + E.HONORS[type - 27] + '</span>';
+    if (settings.textTiles) return tileTextFace(type, red);
+    const file = tileImageFile(type, red);
+    const source = 'https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/' + file;
+    const badge = type < 27 && settings.showTileNumbers
+      ? '<span class="tile-rank-corner" aria-hidden="true">' + (type % 9 + 1) + '</span>'
+      : '';
+    return '<img class="tile-art" src="' + source + '" data-tile-type="' + type + '" data-tile-red="' + (red ? '1' : '0') + '" alt="" draggable="false" loading="lazy" decoding="async">' + badge;
   }
 
   function tileLabel(tile) {
@@ -144,7 +160,7 @@
   function tileHTML(tile, options = {}) {
     const type = typeof tile === 'number' ? tile : tile.type;
     const uid = typeof tile === 'object' ? tile.uid : null;
-    const classes = [options.button ? 'tile-button' : 'tile-static', tileClasses(tile)];
+    const classes = [options.button ? 'tile-button' : 'tile-static', tileClasses(tile), settings.textTiles ? 'tile-text-mode' : 'tile-image-mode'];
     if (options.selected) classes.push('selected');
     if (options.riichi) classes.push('riichi-discard');
     if (options.small) classes.push('small');
@@ -215,7 +231,7 @@
     if (player.riichi && drawn && turnActive) selectedUid = drawn.uid;
     const normal = drawn ? hand.filter(t => t.uid !== drawn.uid) : hand;
     $('handTiles').innerHTML = normal.map(tile => tileHTML(tile, { button: true, selected: tile.uid === selectedUid, action: 'select-tile' })).join('');
-    $('drawnTile').innerHTML = drawn ? tileHTML(drawn, { button: true, selected: drawn.uid === selectedUid, action: 'select-tile', extraClass: 'drawn-selected' }) : '';
+    $('drawnTile').innerHTML = drawn ? tileHTML(drawn, { button: true, selected: drawn.uid === selectedUid, action: 'select-tile' }) : '';
     $('handStateLabel').textContent = game.phase === 'ended'
       ? `국 종료 · ${hand.length}장`
       : game.phase === 'ronOffer'
@@ -247,7 +263,7 @@
     $('doraIndicators').innerHTML = game.doraIndicators.map(tile => tileHTML(tile, { dora: true })).join('');
     $('wallValue').textContent = `${game.wall.length}장`;
     $('roundValue').textContent = game.round;
-    $('seatValue').textContent = '동가';
+    $('seatValue').textContent = `${game.players[0].seat}가`;
     $('pointsValue').textContent = `${game.players[0].points.toLocaleString('ko-KR')}`;
     $('riichiPotLabel').textContent = `공탁 ${game.riichiPot.toLocaleString('ko-KR')}점`;
     $('phaseLabel').textContent = stateText();
@@ -453,7 +469,7 @@
     $('reviewDetailTitle').textContent = `턴 ${d.id} 상세`;
     $('reviewDetailSubtitle').textContent = `당시 공개 정보 · 패산 ${d.wallRemaining}장 · 실제 타패 ${E.tileShort(d.selected.type, d.selected.red)}`;
     container.innerHTML = `<div class="review-assessment ${ev.severity || 'review'}"><strong>${escapeHTML(ev.label)}</strong><p>${escapeHTML(ev.reason)}</p></div>
-      <div class="replay-section-title">당시 내 손패 (14장)</div><div class="replay-hand">${(d.handBefore || []).map(t => tileHTML(t, { extraClass: t.uid === d.drawnTile?.uid ? 'drawn-selected' : '' })).join('')}</div>
+      <div class="replay-section-title">당시 내 손패 (14장)</div><div class="replay-hand">${(d.handBefore || []).map(t => tileHTML(t)).join('')}</div>
       <div class="summary-metrics"><div class="summary-metric"><span>쯔모패</span><strong>${d.drawnTile ? escapeHTML(E.tileShort(d.drawnTile.type, d.drawnTile.red)) : '—'}</strong></div><div class="summary-metric"><span>실제 타패</span><strong>${escapeHTML(E.tileShort(d.selected.type, d.selected.red))}</strong></div><div class="summary-metric"><span>타패 후 샹텐</span><strong>${sel ? shapeName(sel.shanten) : '—'}</strong></div></div>
       <div class="replay-section-title">실제 선택의 유효패</div><p class="section-subtitle" style="margin-bottom:10px">${escapeHTML(eff.length ? eff.map(t => `${E.tileShort(t.type)} ${t.count}장`).join(' · ') : '샹텐을 개선하는 미확인 패 없음')} ${sel ? `— 총 ${sel.ukeire}장` : ''}</p>
       <div class="replay-section-title">당시 상대별 버림패와 공개 정보</div>${replayRiversHTML(d.publicBefore)}
@@ -500,6 +516,9 @@
     $('settingPostAnalysis').checked = Boolean(settings.showPostDiscardAnalysis);
     $('settingAllowHints').checked = Boolean(settings.allowHints);
     $('settingDifficulty').value = settings.difficulty || 'intermediate';
+    $('settingTextTiles').checked = Boolean(settings.textTiles);
+    $('settingTheme').value = settings.theme === 'dark' ? 'dark' : 'light';
+    $('settingStartTurn').value = settings.startTurn === 'opponent' ? 'opponent' : 'self';
     $('historyCount').textContent = `${history.length}국`;
     $('historyList').innerHTML = history.length ? history.slice(0, 15).map(item => `<div class="history-row"><div><strong>${escapeHTML(item.result || '완료')}</strong><small>${escapeHTML(new Date(item.endedAt || item.createdAt || Date.now()).toLocaleString('ko-KR'))} · ${item.decisionCount || 0}회 타패</small></div><div class="history-result"><strong>${item.reviewScore == null ? '미평가' : `${item.reviewScore}점`}</strong><small>${item.pointDeltas?.[0] >= 0 ? '+' : ''}${Number(item.pointDeltas?.[0] || 0).toLocaleString('ko-KR')}점</small></div></div>`).join('') : '<div class="empty-state">완료 기록이 아직 없습니다. 한 국을 끝내면 점수와 복기 지표가 자동 저장됩니다.</div>';
   }
@@ -581,9 +600,10 @@
     selectedUid = null;
     selectedDecisionId = null;
     liveHintVisible = false;
-    showMessage('새 국을 시작했습니다. 손패와 공개 정보를 확인하세요.');
+    showMessage(game.currentTurn === 0 ? '새 국을 시작했습니다. 손패와 공개 정보를 확인하세요.' : '상대의 선공 차례를 진행합니다.');
     renderAll();
     switchView('table');
+    if (game.phase === 'turn' && game.currentTurn !== 0) driveToHuman();
   }
 
   function openDecision(id, view = 'efficiency') {
@@ -745,6 +765,7 @@
         return acc;
       }, []).slice(0, 60);
       if (data.settings && typeof data.settings === 'object') settings = { ...DEFAULT_SETTINGS, ...data.settings };
+      applyTheme(settings.theme);
       saveAll();
       renderAll();
       showToast(`기록 ${normalizedHistory.length}개를 가져왔습니다.`);
@@ -764,9 +785,14 @@
       showPostDiscardAnalysis: $('settingPostAnalysis').checked,
       allowHints: $('settingAllowHints').checked,
       difficulty: $('settingDifficulty').value,
+      textTiles: $('settingTextTiles').checked,
+      theme: $('settingTheme').value === 'dark' ? 'dark' : 'light',
+      startTurn: $('settingStartTurn').value === 'opponent' ? 'opponent' : 'self',
     };
+    applyTheme(settings.theme);
     saveJSON(STORAGE.settings, settings);
-    showToast('설정을 저장했습니다. 진행 중인 국에는 다음 국부터 적용됩니다.');
+    renderTable();
+    showToast('설정을 저장했습니다. 시작 유형은 새 국부터 적용됩니다.');
     renderStatsAndSettings();
   }
 
@@ -795,6 +821,27 @@
     $('refreshDefense').addEventListener('click', newDefenseScenario);
     $('submitDefense').addEventListener('click', submitDefense);
     $('saveSettings').addEventListener('click', saveSettingsFromForm);
+    $('settingTheme').addEventListener('change', () => {
+      settings.theme = $('settingTheme').value === 'dark' ? 'dark' : 'light';
+      applyTheme(settings.theme);
+      saveJSON(STORAGE.settings, settings);
+      showToast(settings.theme === 'dark' ? '다크 모드를 적용했습니다.' : '라이트 모드를 적용했습니다.');
+    });
+    document.addEventListener('error', event => {
+      const img = event.target;
+      if (!(img instanceof HTMLImageElement) || !img.classList.contains('tile-art') || img.dataset.fallbackApplied) return;
+      img.dataset.fallbackApplied = 'true';
+      const type = Number(img.dataset.tileType);
+      const red = img.dataset.tileRed === '1';
+      const fallback = document.createElement('span');
+      fallback.className = 'tile-fallback-face';
+      if (type >= 0 && type < 34) fallback.textContent = type >= 27 ? E.HONORS[type - 27] : `${type % 9 + 1}${['만', '통', '삭'][Math.floor(type / 9)]}`;
+      else fallback.textContent = '?';
+      if (red) fallback.classList.add('red-fallback');
+      const badge = img.nextElementSibling;
+      if (badge?.classList.contains('tile-rank-corner')) badge.remove();
+      img.replaceWith(fallback);
+    }, true);
     $('startWithSettings').addEventListener('click', async () => {
       saveSettingsFromForm();
       await startNewGame(false);
@@ -855,6 +902,7 @@
   }
 
   function initialize() {
+    applyTheme(settings.theme);
     attachEvents();
     newEfficiencyTraining();
     newDefenseScenario();
