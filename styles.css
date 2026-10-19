@@ -435,3 +435,66 @@ h3 { font-size: 13px; margin: 0; }
 .tile-button.suit-m .tile-pips, .tile-static.suit-m .tile-pips { color: #b8443d; }
 .tile-button.suit-p .tile-pips, .tile-static.suit-p .tile-pips { color: #337f61; }
 .tile-button.suit-s .tile-pips, .tile-static.suit-s .tile-pips { color: #356b9b; }
+
+/* Image-based manzu, pinzu and souzu tiles. Artwork: FluffyStuff/riichi-mahjong-tiles (public domain). */
+.tile-button.suit-m, .tile-button.suit-p, .tile-button.suit-s,
+.tile-static.suit-m, .tile-static.suit-p, .tile-static.suit-s {
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+.tile-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+.tile-rank-corner {
+  position: absolute;
+  z-index: 3;
+  top: 1px;
+  left: 1px;
+  display: grid;
+  place-items: center;
+  min-width: 8px;
+  height: 9px;
+  padding: 0 2px;
+  border-radius: 2px;
+  background: rgba(255,255,255,.92);
+  color: #1b3027;
+  box-shadow: 0 1px 2px rgba(0,0,0,.16);
+  font-size: clamp(6px, 1.45vw, 8px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+.tile-button.suit-m.selected, .tile-button.suit-p.selected, .tile-button.suit-s.selected {
+  background: #fff0bf;
+  border-color: #c9963c;
+  box-shadow: 0 0 0 2px 
+rgba(217,169,83,.32);
+  outline: 1px solid #c9963c;
+}
+.tile-button.suit-m.drawn-selected, .tile-button.suit-p.drawn-selected, .tile-button.suit-s.drawn-selected {
+  background: #fff1bf;
+  border-color: #cf9b3f;
+  box-shadow: 0 0 0 2px rgba(217,169,83,.24);
+}
+/* The red-five art already marks aka-dora, so don't overlay the old 赤 label. */
+.tile-button.suit-m.red-five::after, .tile-button.suit-p.red-five::after, .tile-button.suit-s.red-five::after,
+.tile-static.suit-m.red-five::after, 
+.tile-static.suit-p.red-five::after, .tile-static.suit-s.red-five::after {
+  content: none;
+  display: none;
+}
+.tile-static.suit-m.riichi-discard, .tile-static.suit-p.riichi-discard, .tile-static.suit-s.riichi-discard,
+.tile-button.suit-m.riichi-discard, .tile-button.suit-p.riichi-discard, .tile-button.suit-s.riichi-discard {
+  border: 2px solid #c85c4e;
+}
