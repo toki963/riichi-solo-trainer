@@ -169,7 +169,10 @@
             <label class="setting-row"><span><strong>적도라 사용</strong><small>만·통·삭 5에 적도라 한 장씩</small></span><input type="checkbox" id="settingRedFives" checked></label>
             <label class="setting-row"><span><strong>치또이츠·국사무쌍 고려</strong><small>샹텐과 화료 형태 분석에 포함</small></span><input type="checkbox" id="settingSpecialHands" checked></label>
             <label class="setting-row"><span><strong>손패 자동 정렬</strong><small>타일 종류순으로 정렬</small></span><input type="checkbox" id="settingAutoSort" checked></label>
-            <label class="setting-row"><span><strong>패에 숫자·무늬 표시</strong><small>초보자용 글자 표시 옵션</small></span><input type="checkbox" id="settingTileNumbers" checked></label>
+            <label class="setting-row"><span><strong>패에 숫자·무늬 표시</strong><small>이미지 모드의 숫자 배지와 텍스트 표기 설정</small></span><input type="checkbox" id="settingTileNumbers" checked></label>
+            <label class="setting-row"><span><strong>이미지 없이 패 표시</strong><small>기본은 꺼짐. 켜면 외부 이미지 요청 없이 문자·숫자로 표시</small></span><input type="checkbox" id="settingTextTiles"></label>
+            <label class="setting-row"><span><strong>화면 테마</strong><small>게임 화면 전체의 라이트·다크 모드</small></span><select id="settingTheme"><option value="light">라이트</option><option value="dark">다크</option></select></label>
+            <label class="setting-row"><span><strong>새 국 시작 순서</strong><small>상대 선공은 상대가 동가인 상태에서 정상적인 첫 타패를 진행합니다.</small></span><select id="settingStartTurn"><option value="self">내 턴부터</option><option value="opponent">상대 턴부터</option></select></label>
             <label class="setting-row"><span><strong>타패 후 간단 분석 표시</strong><small>마지막 선택의 효율 차이를 보여 줌</small></span><input type="checkbox" id="settingPostAnalysis" checked></label>
             <label class="setting-row"><span><strong>플레이 중 힌트 요청 허용</strong><small>기본은 정답을 숨기고, 요청할 때만 후보를 표시</small></span><input type="checkbox" id="settingAllowHints" checked></label>
             <label class="setting-row"><span><strong>AI 난이도</strong><small>강자 수준 검증이 아닌 기본 휴리스틱 차이</small></span><select id="settingDifficulty"><option value="beginner">초급</option><option value="intermediate">중급</option><option value="advanced">고급</option></select></label>
@@ -196,7 +199,7 @@
       </section>
     </main>
 
-    <footer class="app-footer"><span>로컬 실행 · 서버 전송 없음</span><span>학습용 프로토타입 0.1</span></footer>
+    <footer class="app-footer"><span>게임 기록 로컬 저장 · 이미지 원격 로드</span><span>프로토타입 v0.2.0</span></footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
