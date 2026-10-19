@@ -115,12 +115,24 @@
   function tileFace(tile) {
     const type = typeof tile === 'number' ? tile : tile.type;
     const red = typeof tile === 'object' && Boolean(tile.red);
-    if (type >= 27) return `<span class="tile-number">${E.HONORS[type - 27]}</span>`;
-    const rank = type % 9 + 1;
-    const suit = ['m', 'p', 's'][Math.floor(type / 9)];
-    if (settings.showTileNumbers) return `<span class="tile-number">${red ? 5 : rank}</span><span class="tile-suit">${suit}</span>`;
-    const pips = Array.from({ length: rank }, () => '<i></i>').join('');
-    return `<span class="tile-pips" aria-hidden="true">${pips}</span>`;
+
+    // 만·통·삭은 실제 리치 마작 타일 그림을 사용합니다.
+    if (type < 27) {
+      const rank = type % 9 + 1;
+      const suitName = ['Man', 'Pin', 
+'Sou'][Math.floor(type / 9)];
+      const file = rank === 5 && red
+        ? (suitName + '5-Dora.svg')
+        : (suitName + rank + '.svg');
+      const source = 'https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/' + file;
+      const badge = settings.showTileNumbers
+        ? '<span class="tile-rank-corner" aria-hidden="true">' + rank + '</span>'
+        : '';
+      return '<img class="tile-art" src="' + source + '" alt="" draggable="false" loading="lazy" decoding="async">' + badge;
+    }
+
+    // 자패(동남서북·백발중)는 기존 표기를 유지합니다.
+    return '<span class="tile-number">' + E.HONORS[type - 27] + '</span>';
   }
 
   function tileLabel(tile) {
