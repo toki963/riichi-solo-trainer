@@ -6,6 +6,18 @@
   <meta name="theme-color" content="#0d2420">
   <meta name="description" content="리치 마작 연습실의 버전별 기능 개선 및 수정 기록">
   <title>개발자 패치 노트 · 리치 마작 연습실</title>
+  <script>
+    (() => {
+      let theme = 'light';
+      try {
+        const settings = JSON.parse(localStorage.getItem('riichi-solo-trainer.settings.v1') || '{}');
+        if (settings.theme === 'dark') theme = 'dark';
+      } catch (_) {}
+      document.documentElement.dataset.theme = theme;
+      const themeColor = document.querySelector('meta[name="theme-color"]');
+      if (themeColor) themeColor.content = theme === 'dark' ? '#111916' : '#0d2420';
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css?v=0.2.3">
 </head>
 <body>
