@@ -1157,6 +1157,7 @@
 
   function evaluateHandReview(state) {
     const decisions = state.decisions || [];
+    const reviewed = decisions.filter(d => d.analysis?.ok && d.selectedCandidate && d.analysis.candidates?.length);
     let efficiencyPenalty = 0;
     let shapePenalty = 0;
     let attackScoreTotal = 0;
@@ -1168,10 +1169,9 @@
     let safetyRechecks = 0;
     let bestCalls = 0;
 
-    for (const d of decisions) {
+    for (const d of reviewed) {
       const analysis = d.analysis;
       const selected = d.selectedCandidate;
-      if (!analysis?.ok || !selected || !analysis.candidates.length) continue;
       const minSh = Math.min(...analysis.candidates.map(c => c.shanten));
       const bestAtSh = analysis.candidates.filter(c => c.shanten === minSh);
       const bestUkeire = Math.max(...bestAtSh.map(c => c.ukeire));
@@ -1186,41 +1186,41 @@
 
       const beforeHand = d.handBefore || [];
       const beforeCounts = countsFromTiles(beforeHand);
-      const beforeSh = calcShanten(beforeCounts, { specialHands: state.settings.specialHands });
+      const beforeSh = calcShanten(beforeCounts, { specialHands: state.settings?.specialHands });
       if (!d.opponentsRiichi?.length && beforeSh <= 1) {
-        attackScoreTotal += selected.shanten === minSh ? 100 : Math.max(0, 100 - shLoss * 45 - (ukLoss / Math.max(1, bestUkeire)) * 55);
+        const efficiencyLoss = shLoss * 45 + (ukLoss / Math.max(1, bestUkeire)) * 55;
+        attackScoreTotal += Math.max(0, 100 - efficiencyLoss);
         attackCount++;
       }
 
       if (d.opponentsRiichi?.length) {
         const snapshots = d.publicBefore?.players || [];
-        const visible = [...beforeHand, ...(snapshots.flatMap(p => p.river.map(x => x.tile)) || []), ...(d.publicBefore?.doraIndicators || [])];
+        const visible = [...beforeHand, ...snapshots.flatMap(p => (p.river || []).map(x => x.tile || x)), ...(d.publicBefore?.doraIndicators || [])];
         const signals = d.opponentsRiichi.map(id => {
-          const opponent = snapshots.find(p => p.index === id);
-          return opponent ? getDefenseSignal(d.selected.type, opponent, visible) : { level: 'unclear' };
+          const opponent = snapshots.find(p => p.index === id || p.id === id);
+          return opponent ? getDefenseSignal(d.selected?.type ?? selected.type, opponent, visible) : { level: 'unclear' };
         });
-        let score = 25;
-        if (signals.some(s => s.level === 'safe')) score = 100;
-        else if (signals.some(s => s.level === 'safer')) score = 72;
-        else if (signals.some(s => s.level === 'clue')) score = 55;
-        else safetyRechecks++;
+        const signalScores = signals.map(signal => ({ safe: 100, safer: 72, clue: 55, unclear: 25 }[signal.level] ?? 25));
+        // With multiple riichi players, a tile safe against only one can still deal into another.
+        const score = Math.min(...signalScores);
+        if (score === 25) safetyRechecks++;
         defenseScoreTotal += score;
         defenseCount++;
       }
     }
-    const n = decisions.length || 1;
+    const n = reviewed.length;
     const categories = {
-      efficiency: { label: '패 효율', weight: 40, score: Math.round(40 * (1 - efficiencyPenalty / n)), evaluated: decisions.length > 0, detail: '샹텐 손실과 유효패 매수 감소를 기준으로 계산' },
-      shape: { label: '형태 판단', weight: 20, score: Math.round(20 * (1 - shapePenalty / n)), evaluated: decisions.length > 0, detail: '연결·타츠·쌍을 세는 단순 휴리스틱; 완전한 형태 평가가 아님' },
+      efficiency: { label: '패 효율', weight: 40, score: n ? Math.round(40 * (1 - efficiencyPenalty / n)) : null, evaluated: n > 0, detail: '분석 자료가 있는 타패의 샹텐 손실과 미확인 유효패 감소를 기준으로 계산' },
+      shape: { label: '형태 판단', weight: 20, score: n ? Math.round(20 * (1 - shapePenalty / n)) : null, evaluated: n > 0, detail: '연결·타츠·쌍을 세는 단순 휴리스틱; 완전한 형태 평가가 아님' },
       attack: { label: '공격 판단', weight: 20, score: attackCount ? Math.round(20 * (attackScoreTotal / attackCount / 100)) : null, evaluated: attackCount > 0, detail: attackCount ? `상대 리치가 없고 샹텐 1 이하였던 ${attackCount}회만 평가` : '평가할 공격 기회가 충분하지 않음' },
-      defense: { label: '수비 판단', weight: 20, score: defenseCount ? Math.round(20 * (defenseScoreTotal / defenseCount / 100)) : null, evaluated: defenseCount > 0, detail: defenseCount ? `리치 상대가 있던 ${defenseCount}회에서 현물·스지·벽 단서 활용만 평가` : '상대 리치 상황이 없어 평가 제외' },
+      defense: { label: '수비 판단', weight: 20, score: defenseCount ? Math.round(20 * (defenseScoreTotal / defenseCount / 100)) : null, evaluated: defenseCount > 0, detail: defenseCount ? `리치 상대마다 확인한 단서 중 가장 불리한 수준을 반영한 ${defenseCount}회 평가` : '상대 리치 상황이 없어 평가 제외' },
       situation: { label: '국 상황 판단', weight: 0, score: null, evaluated: false, detail: '단일 동1국만 지원하므로 반장전 순위·오라스 전략은 평가하지 않음' },
     };
     let weighted = 0; let weights = 0;
     for (const cat of Object.values(categories)) if (cat.evaluated && cat.score != null) {
       weighted += cat.score; weights += cat.weight;
     }
-    // Normalize the points actually evaluated to a 100-point scale; omitted domains stay visibly omitted.
+    // Normalize only domains backed by at least one analyzable decision.
     const normalizedScores = {};
     for (const [key, cat] of Object.entries(categories)) normalizedScores[key] = cat.score == null ? null : Math.round((cat.score / Math.max(1, cat.weight)) * 100);
     return {
@@ -1236,7 +1236,7 @@
       notes: [
         '이 점수는 현재 구현된 효율·형태·안전 단서의 휴리스틱 지표이며, 실력이나 승률을 검증한 점수가 아닙니다.',
         '결과(화료·방총)와 의사결정 질을 분리합니다. 상대의 숨은 손패를 알고 있었다고 가정하지 않습니다.',
-        '각 범주의 평가 가능한 배점만 100점으로 환산합니다. 제외된 범주는 점수가 아니라 미평가로 표시됩니다.',
+        '분석 근거가 없는 범주는 점수에서 제외하고, 각 범주의 평가 가능한 배점만 100점으로 환산합니다.',
       ],
     };
   }
