@@ -204,4 +204,80 @@ test('한 국이 종료될 때 복기 평가와 당시 공개 정보 기록을 �
   assert.equal(E.summarizeHand(g).decisionCount, g.decisions.length);
 });
 
+
+function syntheticDecision(selected, candidates, options = {}) {
+  return {
+    handBefore: options.handBefore || [],
+    selected: { type: options.selectedType ?? 0 },
+    selectedCandidate: { type: options.selectedType ?? 0, red: false, shapeScore: 3, ...selected },
+    analysis: { ok: true, candidates: candidates.map(c => ({ shapeScore: 3, ...c })) },
+    opponentsRiichi: options.opponentsRiichi || [],
+    publicBefore: { players: options.players || [], doraIndicators: [] },
+  };
+}
+
+test('평가 근거가 없는 타패는 만점으로 환산하지 않고 평가 불가로 남긴다', () => {
+  const review = E.evaluateHandReview({ decisions: [{ analysis: null, selectedCandidate: null }], settings: {} });
+  assert.equal(review.total, null);
+  assert.equal(review.evaluatedWeight, 0);
+  assert.equal(review.categories.efficiency.score, null);
+  assert.equal(review.categories.shape.score, null);
+});
+
+test('최선보다 유효패 한 장 적은 대안은 점수를 연속적으로 조금만 잃는다', () => {
+  const candidates = [{ shanten: 0, ukeire: 10, shapeScore: 3 }, { shanten: 0, ukeire: 9, shapeScore: 3 }];
+  const exact = E.evaluateHandReview({ decisions: [syntheticDecision(candidates[0], candidates)], settings: {} });
+  const alternative = E.evaluateHandReview({ decisions: [syntheticDecision(candidates[1], candidates)], settings: {} });
+  assert.equal(exact.normalizedScores.efficiency, 100);
+  assert.equal(alternative.normalizedScores.efficiency, 95);
+  assert.ok(alternative.total >= 95);
+});
+
+test('한 상대에게는 현물이지만 다른 리치 상대에게는 불명확한 패를 만점 수비로 보지 않는다', () => {
+  const decision = syntheticDecision(
+    { shanten: 0, ukeire: 8, shapeScore: 3 },
+    [{ shanten: 0, ukeire: 8, shapeScore: 3 }],
+    {
+      selectedType: 0,
+      opponentsRiichi: ['east', 'south'],
+      players: [
+        { id: 'east', index: 'east', river: [{ tile: { type: 0 } }] },
+        { id: 'south', index: 'south', river: [] },
+      ],
+    }
+  );
+  const review = E.evaluateHandReview({ decisions: [decision], settings: {} });
+  assert.equal(review.categories.defense.score, 5); // 25/100 evidence score × 20-point weight
+  assert.equal(review.normalizedScores.defense, 25);
+  assert.equal(review.total, 81);
+});
+
+test('효율이 조금 낮아도 모든 리치 상대에게 안전한 현물이 위험한 고효율 타패보다 높은 평가를 받는다', () => {
+  const candidates = [{ shanten: 0, ukeire: 8, shapeScore: 3 }, { shanten: 0, ukeire: 4, shapeScore: 3 }];
+  const dangerous = syntheticDecision(candidates[0], candidates, {
+    selectedType: 0,
+    opponentsRiichi: ['east'],
+    players: [{ id: 'east', index: 'east', river: [] }],
+  });
+  const safe = syntheticDecision(candidates[1], candidates, {
+    selectedType: 0,
+    opponentsRiichi: ['east'],
+    players: [{ id: 'east', index: 'east', river: [{ tile: { type: 0 } }] }],
+  });
+  const riskyReview = E.evaluateHandReview({ decisions: [dangerous], settings: {} });
+  const safeReview = E.evaluateHandReview({ decisions: [safe], settings: {} });
+  assert.equal(riskyReview.normalizedScores.defense, 25);
+  assert.equal(safeReview.normalizedScores.defense, 100);
+  assert.ok(safeReview.total > riskyReview.total);
+});
+
+test('화료 여부와 최종 점수 변화는 동일한 선택 기록의 판단 점수에 영향을 주지 않는다', () => {
+  const candidates = [{ shanten: 0, ukeire: 7, shapeScore: 3 }, { shanten: 1, ukeire: 0, shapeScore: 1 }];
+  const decision = syntheticDecision(candidates[0], candidates);
+  const win = E.evaluateHandReview({ decisions: [decision], settings: {}, final: { winner: 0 }, players: [{ points: 40000 }] });
+  const loss = E.evaluateHandReview({ decisions: [decision], settings: {}, final: { winner: 1 }, players: [{ points: 10000 }] });
+  assert.equal(win.total, loss.total);
+  assert.deepEqual(win.normalizedScores, loss.normalizedScores);
+});
+
 console.log(`\n${passed} tests passed.`);
